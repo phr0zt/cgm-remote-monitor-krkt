@@ -15,6 +15,9 @@ const APP_PASS = process.env.APP_PASS || "";
 const TZ = process.env.TZ || "America/Toronto";
 const BASAGLAR_DEFAULT = Number(process.env.BASAGLAR_DEFAULT || 25);
 const PORT = Number(process.env.PORT || 3000);
+const BASAGLAR_TIME = process.env.BASAGLAR_TIME || "16:00";          // fallback HH:MM local
+const CAL_ICS_URL = process.env.CALENDAR_ICS_URL || "";              // Google "secret address in iCal format"
+const CAL_MATCH = (process.env.CALENDAR_MATCH || "basaglar").toLowerCase();
 
 // Tags we write into the Nightscout "notes" field so the checklist can
 // recognise its own entries. xDrip entries have no tag and are shown as-is.
@@ -28,7 +31,7 @@ const KINDS = {
 
 // What "done for today" means. Edit freely.
 const CHECKLIST = [
-  { id: "basaglar", label: "Basaglar (long-acting)", need: 1 },
+  { id: "basaglar", label: "Basaglar (long-acting)", need: 1, scheduled: true },
   { id: "apidra",   label: "Apidra with a meal",     need: 1 },
   { id: "carbs",    label: "Ate something",          need: 1 },
 ];
@@ -56,6 +59,42 @@ function localDate(now = new Date()) {
   return new Intl.DateTimeFormat("en-CA", { timeZone: TZ, weekday: "long", month: "long", day: "numeric" }).format(now);
 }
 
+// ---------- calendar: today's scheduled Basaglar time ----------
+let calCache = { at: 0, time: null };
+function icsTime(v) {
+  // "20260930T160000" (local, TZID) or "...Z" (UTC) -> "HH:MM" local
+  const m = v.match(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/); if (!m) return null;
+  if (v.endsWith("Z")) {
+    const d = new Date(Date.UTC(+m[1], m[2]-1, +m[3], +m[4], +m[5]));
+    return new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hour12: false }).format(d);
+  }
+  return `${m[4]}:${m[5]}`;
+}
+async function scheduledTime() {
+  if (!CAL_ICS_URL) return BASAGLAR_TIME;
+  if (Date.now() - calCache.at < 5 * 60000 && calCache.time) return calCache.time;
+  try {
+    const text = await (await fetch(CAL_ICS_URL)).text();
+    const todayKey = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()).replace(/-/g, "");
+    let series = null, instance = null;
+    for (const ev of text.split("BEGIN:VEVENT").slice(1)) {
+      const body = ev.split("END:VEVENT")[0].replace(/\r?\n[ \t]/g, "");
+      const sum = (body.match(/^SUMMARY:(.*)$/m) || [])[1] || "";
+      if (!sum.toLowerCase().includes(CAL_MATCH)) continue;
+      const dt = (body.match(/^DTSTART[^:]*:(.*)$/m) || [])[1] || "";
+      const rid = (body.match(/^RECURRENCE-ID[^:]*:(.*)$/m) || [])[1] || "";
+      if (rid.startsWith(todayKey) || dt.startsWith(todayKey)) instance = icsTime(dt);
+      else if (/^RRULE:/m.test(body)) series = icsTime(dt);
+    }
+    calCache = { at: Date.now(), time: instance || series || BASAGLAR_TIME };
+  } catch { calCache = { at: Date.now(), time: calCache.time || BASAGLAR_TIME }; }
+  return calCache.time;
+}
+function pretty(hhmm) {
+  const [h, m] = hhmm.split(":").map(Number);
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
+}
+
 async function ns(pathname, opts = {}) {
   if (!NS_URL) throw new Error("NS_URL not set");
   const res = await fetch(NS_URL + pathname, {
@@ -78,6 +117,8 @@ function classify(t) {
 
 async function today() {
   const since = localMidnightUTC();
+  const sched = await scheduledTime();
+  const nowHM = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date());
   const [treatments, sgv] = await Promise.all([
     ns(`/api/v1/treatments.json?find[created_at][$gte]=${since.toISOString()}&count=200`),
     ns(`/api/v1/entries/sgv.json?count=1`).catch(() => []),
@@ -99,8 +140,11 @@ async function today() {
   const checklist = CHECKLIST.map((c) => {
     const hits = items.filter((i) => i.kind === c.id && (i.value === null || i.value > 0));
     const last = hits[0];
-    return { ...c, done: hits.length >= c.need, count: hits.length,
-      detail: last ? `${last.value != null ? last.value + last.unit : ""} at ${last.time}`.trim() : "not yet" };
+    const done = hits.length >= c.need;
+    const label = c.scheduled ? `${c.label} ${pretty(sched)}` : c.label;
+    let detail = last ? `${last.value != null ? last.value + last.unit : ""} at ${last.time}`.trim() : "not yet";
+    if (!done && c.scheduled) detail = nowHM >= sched ? "due" : "not yet";
+    return { ...c, label, done, count: hits.length, detail, late: !done && c.scheduled && nowHM >= sched };
   });
 
   const g = sgv[0];

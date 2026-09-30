@@ -27,6 +27,7 @@ const KINDS = {
   carbs:    { label: "Food",     unit: "g", eventType: "Carb Correction", field: "carbs", tag: "[carbs]" },
   bg:       { label: "Finger prick", unit: " mmol/L", eventType: "BG Check", field: "glucose", tag: "[bg]" },
   note:     { label: "Note",     unit: "",  eventType: "Note", field: null, tag: "[note]" },
+  activity: { label: "Activity", unit: "",  eventType: "Exercise", field: null, tag: "[activity]" },
 };
 
 // What "done for today" means. Edit freely.
@@ -110,6 +111,7 @@ function classify(t) {
   for (const [id, k] of Object.entries(KINDS)) if (notes.includes(k.tag)) return id;
   // Untagged entries came from xDrip
   if (t.eventType === "BG Check" || t.glucoseType === "Finger") return "bg";
+  if (t.eventType === "Exercise") return "activity";
   if (t.insulin > 0) return "apidra";       // assume fast-acting unless tagged
   if (t.carbs > 0) return "carbs";
   return "note";

@@ -103,7 +103,8 @@
   <button class="btn" data-kind="apidra">Apidra<small>with food</small></button>
   <button class="btn" data-kind="carbs">Food<small>carbs in grams</small></button>
   <button class="btn" data-kind="bg">Finger prick<small>blood test, mmol/L</small></button>
-  <button class="btn wide" data-kind="note">Note<small>anything else</small></button>
+  <button class="btn" data-kind="note">Note<small>anything else</small></button>
+  <button class="btn" data-kind="activity">Activity<small>phys. movement</small></button>
 </div>
 
 <h2 id="h-check">Today</h2>
@@ -124,7 +125,7 @@
 
 <script>
 const $ = (s) => document.querySelector(s);
-const LABEL = { basaglar:"Basaglar", apidra:"Apidra", carbs:"Food", bg:"Finger prick", note:"Note" };
+const LABEL = { basaglar:"Basaglar", apidra:"Apidra", carbs:"Food", bg:"Finger prick", note:"Note", activity:"Activity" };
 const UNIT  = { basaglar:"u", apidra:"u", carbs:"g", bg:"mmol/L" };
 const ARROW = { DoubleUp:"⇈", SingleUp:"↑", FortyFiveUp:"↗", Flat:"→", FortyFiveDown:"↘", SingleDown:"↓", DoubleDown:"⇊" };
 let defaults = { basaglar: 25 };
@@ -172,8 +173,9 @@ let kind=null, val="";
 document.querySelectorAll(".btn").forEach(b=>b.addEventListener("click",()=>open(b.dataset.kind)));
 function open(k){
   kind=k;
-  if(k==="note"){
-    $("#sheet").innerHTML = `<h3>Note</h3><textarea id="note" placeholder="e.g. walked 20 min, felt dizzy, skipped lunch"></textarea>
+  if(k==="note"||k==="activity"){
+    const ph = k==="activity" ? "e.g. walked 20 min, stairs, cleaned the house" : "e.g. felt dizzy, skipped lunch, new sensor";
+    $("#sheet").innerHTML = `<h3>${LABEL[k]}</h3><textarea id="note" placeholder="${ph}"></textarea>
       <div class="row"><button class="cancel" onclick="close()">Cancel</button><button class="ok" onclick="saveNote()">OK</button></div>`;
     $("#veil").classList.add("open"); $("#note").focus(); return;
   }
@@ -201,7 +203,7 @@ async function save(){
 }
 async function saveNote(){
   const t=$("#note").value.trim(); if(!t) return toast("Write something first", true);
-  await post({kind:"note", note:t});
+  await post({kind, note:t});
 }
 async function post(body){
   try{

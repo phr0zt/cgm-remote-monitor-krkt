@@ -72,7 +72,7 @@ function icsTime(v) {
 }
 async function scheduledTime() {
   if (!CAL_ICS_URL) return BASAGLAR_TIME;
-  if (Date.now() - calCache.at < 5 * 60000 && calCache.time) return calCache.time;
+  if (Date.now() - calCache.at < 60 * 60000 && calCache.time) return calCache.time;
   try {
     const text = await (await fetch(CAL_ICS_URL)).text();
     const todayKey = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()).replace(/-/g, "");

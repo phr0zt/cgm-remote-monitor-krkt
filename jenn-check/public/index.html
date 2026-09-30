@@ -131,7 +131,9 @@ let defaults = { basaglar: 25 };
 
 async function load(){
   try{
-    const d = await (await fetch("/api/today",{cache:"no-store"})).json();
+    const r = await fetch("/api/today",{cache:"no-store"});
+    if(r.status===401){ location.href="/"; return; }
+    const d = await r.json();
     if(d.error) throw new Error(d.error);
     defaults = d.defaults || defaults;
     $("#date").textContent = d.date;

@@ -171,16 +171,23 @@ async function addTreatment({ kind, value, note }) {
   return ns("/api/v1/treatments", { method: "POST", body: JSON.stringify([body]) });
 }
 
-// ---------- server ----------
-function unauthorized(res) {
-  res.writeHead(401, { "WWW-Authenticate": 'Basic realm="Jenn"', "Content-Type": "text/plain" });
-  res.end("Login required");
-}
+// ---------- server: cookie login ----------
+const SESSION_KEY = crypto.createHmac("sha256", APP_PASS + "|" + APP_USER).update("jenn-check").digest("hex");
+function token() { return crypto.createHmac("sha256", SESSION_KEY).update(APP_USER).digest("hex"); }
 function authed(req) {
-  const h = req.headers.authorization || "";
-  if (!h.startsWith("Basic ")) return false;
-  const [u, p] = Buffer.from(h.slice(6), "base64").toString().split(":");
-  return u === APP_USER && p === APP_PASS && APP_PASS.length > 0;
+  const m = (req.headers.cookie || "").match(/(?:^|;\s*)jc=([a-f0-9]+)/);
+  return APP_PASS.length > 0 && m && m[1] === token();
+}
+function loginPage(res, err) {
+  res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+  res.end(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Jenn — sign in</title>
+<link rel="manifest" href="/manifest.json"><meta name="theme-color" content="#16222C"><link rel="apple-touch-icon" href="/icon-192.png">
+<style>body{margin:0;background:#16222C;color:#EEE9DF;font:18px/1.4 "Atkinson Hyperlegible",system-ui,sans-serif;display:grid;place-items:center;min-height:100vh}
+form{width:min(92vw,360px);display:grid;gap:12px}h1{font-size:24px;margin:0 0 8px}input{font:inherit;font-size:20px;padding:14px;border:0;border-radius:14px;background:#26394A;color:#EEE9DF}
+button{font:inherit;font-size:20px;font-weight:700;padding:16px;border:0;border-radius:14px;background:#8FC49A;color:#12281A}.e{color:#E9604F}</style></head>
+<body><form method="post" action="/login"><h1>Jenn — today</h1>${err ? '<div class="e">Wrong username or password</div>' : ""}
+<input name="u" placeholder="Username" autocomplete="username" autocapitalize="none"><input name="p" type="password" placeholder="Password" autocomplete="current-password">
+<button>Sign in</button></form></body></html>`);
 }
 function send(res, code, obj) {
   res.writeHead(code, { "Content-Type": "application/json", "Cache-Control": "no-store" });
@@ -200,7 +207,19 @@ http.createServer(async (req, res) => {
     res.writeHead(200, { "Content-Type": STATIC[req.url], "Cache-Control": "public, max-age=3600" });
     return res.end(fs.readFileSync(path.join(__dirname, "public", req.url)));
   }
-  if (!authed(req)) return unauthorized(res);
+  if (req.method === "POST" && req.url === "/login") {
+    const q = new URLSearchParams(await readBody(req));
+    if (q.get("u") === APP_USER && q.get("p") === APP_PASS && APP_PASS) {
+      res.writeHead(302, { "Set-Cookie": `jc=${token()}; Path=/; Max-Age=31536000; HttpOnly; Secure; SameSite=Lax`, Location: "/" });
+      return res.end();
+    }
+    return loginPage(res, true);
+  }
+  if (req.url === "/logout") { res.writeHead(302, { "Set-Cookie": "jc=; Path=/; Max-Age=0", Location: "/" }); return res.end(); }
+  if (!authed(req)) {
+    if (req.url.startsWith("/api/")) return send(res, 401, { error: "login required" });
+    return loginPage(res, false);
+  }
   try {
     if (req.method === "GET" && req.url.startsWith("/api/today")) return send(res, 200, await today());
     if (req.method === "POST" && req.url === "/api/treat") {

@@ -22,7 +22,7 @@ const KINDS = {
   basaglar: { label: "Basaglar", unit: "u", eventType: "Note", field: "insulin", tag: "[basaglar]" },
   apidra:   { label: "Apidra",   unit: "u", eventType: "Correction Bolus", field: "insulin", tag: "[apidra]" },
   carbs:    { label: "Food",     unit: "g", eventType: "Carb Correction", field: "carbs", tag: "[carbs]" },
-  other:    { label: "Other insulin", unit: "u", eventType: "Correction Bolus", field: "insulin", tag: "[other]" },
+  bg:       { label: "Finger prick", unit: " mmol/L", eventType: "BG Check", field: "glucose", tag: "[bg]" },
   note:     { label: "Note",     unit: "",  eventType: "Note", field: null, tag: "[note]" },
 };
 
@@ -70,6 +70,7 @@ function classify(t) {
   const notes = t.notes || "";
   for (const [id, k] of Object.entries(KINDS)) if (notes.includes(k.tag)) return id;
   // Untagged entries came from xDrip
+  if (t.eventType === "BG Check" || t.glucoseType === "Finger") return "bg";
   if (t.insulin > 0) return "apidra";       // assume fast-acting unless tagged
   if (t.carbs > 0) return "carbs";
   return "note";
@@ -122,6 +123,7 @@ async function addTreatment({ kind, value, note }) {
     if (!(n > 0)) throw new Error("value must be above 0");
     body[k.field] = n;
   }
+  if (kind === "bg") { body.glucoseType = "Finger"; body.units = "mmol"; }
   return ns("/api/v1/treatments", { method: "POST", body: JSON.stringify([body]) });
 }
 

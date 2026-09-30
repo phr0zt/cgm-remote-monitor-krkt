@@ -93,7 +93,7 @@
   <button class="btn" data-kind="basaglar">Basaglar<small>long-acting</small></button>
   <button class="btn" data-kind="apidra">Apidra<small>with food</small></button>
   <button class="btn" data-kind="carbs">Food<small>carbs in grams</small></button>
-  <button class="btn" data-kind="other">Other insulin<small>ultra-fast</small></button>
+  <button class="btn" data-kind="bg">Finger prick<small>blood test, mmol/L</small></button>
   <button class="btn wide" data-kind="note">Note<small>anything else</small></button>
 </div>
 
@@ -110,8 +110,8 @@
 
 <script>
 const $ = (s) => document.querySelector(s);
-const LABEL = { basaglar:"Basaglar", apidra:"Apidra", carbs:"Food", other:"Other insulin", note:"Note" };
-const UNIT  = { basaglar:"u", apidra:"u", carbs:"g", other:"u" };
+const LABEL = { basaglar:"Basaglar", apidra:"Apidra", carbs:"Food", bg:"Finger prick", note:"Note" };
+const UNIT  = { basaglar:"u", apidra:"u", carbs:"g", bg:"mmol/L" };
 const ARROW = { DoubleUp:"⇈", SingleUp:"↑", FortyFiveUp:"↗", Flat:"→", FortyFiveDown:"↘", SingleDown:"↓", DoubleDown:"⇊" };
 let defaults = { basaglar: 25 };
 
@@ -162,7 +162,7 @@ function open(k){
     $("#veil").classList.add("open"); $("#note").focus(); return;
   }
   val = k==="basaglar" ? String(defaults.basaglar) : "";
-  $("#sheet").innerHTML = `<h3>${LABEL[k]} — how much?</h3>
+  $("#sheet").innerHTML = `<h3>${k==="bg" ? "Finger prick — reading?" : LABEL[k]+" — how much?"}</h3>
     <div class="val"><span id="v"></span><span class="u">${UNIT[k]}</span></div>
     <div class="pad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button onclick="key('${n}')">${n}</button>`).join("")}
       <button class="soft" onclick="key('.')">.</button><button onclick="key('0')">0</button><button class="soft" onclick="key('⌫')">⌫</button></div>

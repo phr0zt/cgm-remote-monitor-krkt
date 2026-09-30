@@ -191,9 +191,15 @@ function readBody(req) {
 }
 
 const INDEX = fs.readFileSync(path.join(__dirname, "public", "index.html"));
+const STATIC = { "/manifest.json": "application/manifest+json", "/sw.js": "application/javascript",
+  "/icon-192.png": "image/png", "/icon-512.png": "image/png" };
 
 http.createServer(async (req, res) => {
   if (req.url === "/health") return send(res, 200, { ok: true });
+  if (STATIC[req.url]) {
+    res.writeHead(200, { "Content-Type": STATIC[req.url], "Cache-Control": "public, max-age=3600" });
+    return res.end(fs.readFileSync(path.join(__dirname, "public", req.url)));
+  }
   if (!authed(req)) return unauthorized(res);
   try {
     if (req.method === "GET" && req.url.startsWith("/api/today")) return send(res, 200, await today());

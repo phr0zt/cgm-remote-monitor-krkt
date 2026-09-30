@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Jenn — today</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#16222C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Jenn">
+<link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -204,6 +210,7 @@ async function post(body){
 }
 let tt; function toast(m,err){ const t=$("#toast"); t.textContent=m; t.className="toast show"+(err?" err":""); clearTimeout(tt); tt=setTimeout(()=>t.className="toast",2600); }
 
+if("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(()=>{});
 load(); setInterval(load, 60000);
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden) load(); });
 </script>

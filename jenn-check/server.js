@@ -35,6 +35,7 @@ const CHECKLIST = [
   { id: "basaglar", label: "Basaglar (long-acting)", need: 1, scheduled: true },
   { id: "apidra",   label: "Apidra with a meal",     need: 1 },
   { id: "carbs",    label: "Ate something",          need: 1 },
+  { id: "activity", label: "Moved today",            need: 1 },
 ];
 
 // ---------- helpers ----------

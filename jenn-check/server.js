@@ -301,10 +301,13 @@ function authed(req) {
 function loginPage(res, err) {
   res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
   res.end(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Jenn — sign in</title>
-<link rel="manifest" href="/manifest.json"><meta name="theme-color" content="#16222C"><link rel="apple-touch-icon" href="/icon-192.png">
-<style>body{margin:0;background:#16222C;color:#EEE9DF;font:18px/1.4 "Atkinson Hyperlegible",system-ui,sans-serif;display:grid;place-items:center;min-height:100vh}
-form{width:min(92vw,360px);display:grid;gap:12px}h1{font-size:24px;margin:0 0 8px}input{font:inherit;font-size:20px;padding:14px;border:0;border-radius:14px;background:#26394A;color:#EEE9DF}
-button{font:inherit;font-size:20px;font-weight:700;padding:16px;border:0;border-radius:14px;background:#8FC49A;color:#12281A}.e{color:#E9604F}</style></head>
+<link rel="manifest" href="/manifest.json"><meta name="theme-color" content="#000000"><link rel="apple-touch-icon" href="/icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;400;800&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#000 radial-gradient(120% 60% at 50% 115%,#A5122C,transparent 62%) no-repeat;color:#F1EDE6;font:18px/1.4 Inter,system-ui,sans-serif;display:grid;place-items:center;min-height:100vh}
+form{width:min(92vw,360px);display:grid;gap:12px}h1{font-size:34px;font-weight:200;letter-spacing:-.02em;margin:0 0 8px}
+input{font:inherit;font-size:18px;padding:14px;border:1px solid rgba(241,237,230,.16);border-radius:8px;background:#0B0B0C;color:#F1EDE6}input:focus{outline:2px solid #D8347A;outline-offset:2px}
+button{font:inherit;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;padding:16px;border:1px solid #F1EDE6;border-radius:70px;background:transparent;color:#F1EDE6}button:active{border-color:#D8347A;color:#D8347A}
+.e{color:#D8347A;font-size:14px}</style></head>
 <body><form method="post" action="/login"><h1>Jenn — today</h1>${err ? '<div class="e">Wrong username or password</div>' : ""}
 <input name="u" placeholder="Username" autocomplete="username" autocapitalize="none"><input name="p" type="password" placeholder="Password" autocomplete="current-password">
 <button>Sign in</button></form></body></html>`);

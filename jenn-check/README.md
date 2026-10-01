@@ -14,3 +14,8 @@ Settings > Cloud Upload > Nightscout Sync (REST-API): enable, Base URL
 
 ## Checklist
 Edit `CHECKLIST` at the top of `server.js` to change what counts as done for the day.
+
+## Reminder (optional)
+Install the free ntfy app on Jenn's phone, subscribe to a private topic name, and set `NTFY_TOPIC` to it.
+`NTFY_TOPIC_COPY` sends a copy to a second topic. One ping fires `REMIND_AFTER_MIN` minutes after the
+scheduled Basaglar time if nothing is logged; never more than once a day.

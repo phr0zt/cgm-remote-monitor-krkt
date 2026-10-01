@@ -81,6 +81,15 @@
   .cancel{background:transparent;color:var(--dim);border:2px solid var(--line)!important}
   .ok{background:var(--ok);color:#12281A}
   textarea{width:100%;font:inherit;font-size:19px;background:var(--panel2);color:var(--ink);border:0;border-radius:14px;padding:14px;min-height:110px;margin-bottom:12px;resize:vertical}
+  .strip{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 14px}
+  .chip{background:var(--panel);border-radius:999px;padding:8px 14px;font-size:15px;color:var(--dim)}
+  .chip b{color:var(--ink)} .chip.good b{color:var(--ok)} .chip.bad b{color:var(--red)}
+  .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .tile{background:var(--panel);border-radius:var(--r);padding:14px 12px;text-align:center}
+  .tile .n{font-size:26px;font-weight:700;line-height:1.1} .tile .l{font-size:13px;color:var(--dim);margin-top:4px}
+  .prompt .mark{border-color:var(--wait);background:rgba(227,174,94,.15)} .prompt .det{color:var(--wait);font-weight:700}
+  .hint{background:var(--panel2);border-radius:14px;padding:12px 14px;font-size:16px;margin:0 0 12px;line-height:1.4}
+  .hint b{color:var(--wait)} .hint .cap{color:var(--red)}
   footer{margin-top:40px;text-align:center;color:var(--dim);font-size:13px;line-height:1.6}
   footer a{color:var(--blue);text-decoration:none}
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ok);color:#12281A;padding:12px 20px;border-radius:999px;font-weight:700;opacity:0;transition:opacity .2s;pointer-events:none}
@@ -97,6 +106,7 @@
   <span class="meta" id="gmeta">loading</span>
 </div>
 <p class="date" id="date"></p>
+<div class="strip" id="strip"></div>
 
 <div class="grid">
   <button class="btn" data-kind="basaglar">Basaglar<small>long-acting</small></button>
@@ -109,6 +119,9 @@
 
 <h2 id="h-check">Today</h2>
 <ul class="check" id="check"></ul>
+
+<h2>Last 7 days</h2>
+<div class="tiles" id="week"></div>
 
 <h2>Log</h2>
 <ul class="log" id="log"></ul>
@@ -150,10 +163,22 @@ async function load(){
       else el.classList.add(g.mmol>=10?"high":g.mmol<4?"low":"ok");
     }
 
+    window.__d = d;
+    const b = d.basaglar || {};
+    $("#strip").innerHTML =
+      `<span class="chip ${b.yesterday?"good":"bad"}">Basaglar yesterday <b>${b.yesterday?"✓":"missed"}</b></span>` +
+      `<span class="chip ${b.streak>=3?"good":""}">Streak <b>${b.streak} day${b.streak===1?"":"s"}</b></span>` +
+      (d.iob>0 ? `<span class="chip">Insulin active <b>${d.iob}u</b></span>` : "");
+    const w = d.week;
+    $("#week").innerHTML = w ? `
+      <div class="tile"><div class="n" style="color:${w.tir>=50?"var(--ok)":w.tir>=25?"var(--wait)":"var(--red)"}">${w.tir}%</div><div class="l">in range 3.9–10</div></div>
+      <div class="tile"><div class="n">${w.avg}</div><div class="l">avg mmol/L</div></div>
+      <div class="tile"><div class="n" style="color:${w.basaglarDays>=6?"var(--ok)":"var(--wait)"}">${w.basaglarDays}/7</div><div class="l">Basaglar days</div></div>`
+      : `<div class="empty">No glucose data yet.</div>`;
     const allDone = d.checklist.every(c=>c.done);
     $("#h-check").textContent = allDone ? "Today — all done" : "Today";
     $("#check").innerHTML = d.checklist.map(c=>`
-      <li class="${c.done?"done":(c.late?"todo late":"todo")}">
+      <li class="${c.done?"done":(c.late?"todo late":c.prompt?"todo prompt":"todo")}">
         <span class="mark">${c.done?"✓":""}</span>
         <span class="lbl">${c.label}</span>
         <span class="det">${c.detail}</span>
@@ -180,7 +205,16 @@ function open(k){
     $("#veil").classList.add("open"); $("#note").focus(); return;
   }
   val = k==="basaglar" ? String(defaults.basaglar) : "";
-  $("#sheet").innerHTML = `<h3>${k==="bg" ? "Finger prick — reading?" : LABEL[k]+" — how much?"}</h3>
+  let hint = "";
+  if(k==="apidra" && window.__d){
+    const d = window.__d, c = d.correction, lf = d.lastFast;
+    const parts = [];
+    if(lf) parts.push(`Last dose <b>${lf.value}u</b> ${lf.minsAgo<60?lf.minsAgo+" min":Math.round(lf.minsAgo/60*10)/10+" h"} ago, <b>${d.iob}u</b> still active.`);
+    else if(d.iob>0) parts.push(`<b>${d.iob}u</b> still active.`);
+    if(c) parts.push(`${d.glucose.mmol} → ${c.target}: about <b>${c.net}u</b> after what's active${c.capped?` <span class="cap">(capped at ${d.maxCorrection}u — recheck in 2 h)</span>`:""}.`);
+    if(parts.length) hint = `<div class="hint">${parts.join(" ")}</div>`;
+  }
+  $("#sheet").innerHTML = `<h3>${k==="bg" ? "Finger prick — reading?" : LABEL[k]+" — how much?"}</h3>${hint}
     <div class="val"><span id="v"></span><span class="u">${UNIT[k]}</span></div>
     <div class="pad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button onclick="key('${n}')">${n}</button>`).join("")}
       <button class="soft" onclick="key('.')">.</button><button onclick="key('0')">0</button><button class="soft" onclick="key('⌫')">⌫</button></div>
